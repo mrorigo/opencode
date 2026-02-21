@@ -800,7 +800,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
     }
     const logprobs: Array<z.infer<typeof LOGPROBS_SCHEMA>> = []
     let responseId: string | null = null
-    const ongoingToolCalls: Record<
+    const ongoingToolCalls = Object.create(null) as Record<
       number,
       | {
           toolName: string
@@ -810,21 +810,21 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
           }
         }
       | undefined
-    > = {}
+    >
 
     // flag that checks if there have been client-side tool calls (not executed by openai)
     let hasFunctionCall = false
 
     // Track reasoning by output_index instead of item_id
     // GitHub Copilot rotates encrypted item IDs on every event
-    const activeReasoning: Record<
+    const activeReasoning = Object.create(null) as Record<
       number,
       {
         canonicalId: string // the item.id from output_item.added
         encryptedContent?: string | null
         summaryParts: number[]
       }
-    > = {}
+    >
 
     // Track current active reasoning output_index for correlating summary events
     let currentReasoningOutputIndex: number | null = null
@@ -1101,7 +1101,12 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
               } else if (isResponseOutputItemDoneReasoningChunk(value)) {
                 const activeReasoningPart = activeReasoning[value.output_index]
                 if (activeReasoningPart) {
-                  for (const summaryIndex of activeReasoningPart.summaryParts) {
+                  const summaryParts =
+                    Array.isArray(activeReasoningPart.summaryParts) && activeReasoningPart.summaryParts.length > 0
+                      ? activeReasoningPart.summaryParts
+                      : [0]
+
+                  for (const summaryIndex of summaryParts) {
                     controller.enqueue({
                       type: "reasoning-end",
                       id: `${activeReasoningPart.canonicalId}:${summaryIndex}`,
