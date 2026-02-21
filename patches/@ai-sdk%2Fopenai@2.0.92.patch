@@ -1,0 +1,192 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 139ffb208..6b99a24ba 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -4064,6 +4064,10 @@ var OpenAIResponsesLanguageModel = class {
+                 });
+               } else if (value.item.type === "reasoning") {
+                 const activeReasoningPart = activeReasoning[value.item.id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  delete activeReasoning[value.item.id];
++                  return;
++                }
+                 const summaryPartIndices = Object.entries(
+                   activeReasoningPart.summaryParts
+                 ).filter(
+@@ -4146,6 +4150,9 @@ var OpenAIResponsesLanguageModel = class {
+             } else if (value.type === "response.reasoning_summary_part.added") {
+               if (value.summary_index > 0) {
+                 const activeReasoningPart = activeReasoning[value.item_id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  return;
++                }
+                 activeReasoningPart.summaryParts[value.summary_index] = "active";
+                 for (const summaryIndex of Object.keys(
+                   activeReasoningPart.summaryParts
+@@ -4184,6 +4191,10 @@ var OpenAIResponsesLanguageModel = class {
+                 }
+               });
+             } else if (value.type === "response.reasoning_summary_part.done") {
++              const activeReasoningPart = activeReasoning[value.item_id];
++              if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                return;
++              }
+               if (store) {
+                 controller.enqueue({
+                   type: "reasoning-end",
+@@ -4192,9 +4203,9 @@ var OpenAIResponsesLanguageModel = class {
+                     [providerKey]: { itemId: value.item_id }
+                   }
+                 });
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "concluded";
++                activeReasoningPart.summaryParts[value.summary_index] = "concluded";
+               } else {
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "can-conclude";
++                activeReasoningPart.summaryParts[value.summary_index] = "can-conclude";
+               }
+             } else if (isResponseFinishedChunk(value)) {
+               finishReason = mapOpenAIResponseFinishReason({
+diff --git a/dist/index.js b/dist/index.js
+index 9b1c0e6a1..85bebef36 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -3991,6 +3991,10 @@ var OpenAIResponsesLanguageModel = class {
+                 });
+               } else if (value.item.type === "reasoning") {
+                 const activeReasoningPart = activeReasoning[value.item.id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  delete activeReasoning[value.item.id];
++                  return;
++                }
+                 const summaryPartIndices = Object.entries(
+                   activeReasoningPart.summaryParts
+                 ).filter(
+@@ -4073,6 +4077,9 @@ var OpenAIResponsesLanguageModel = class {
+             } else if (value.type === "response.reasoning_summary_part.added") {
+               if (value.summary_index > 0) {
+                 const activeReasoningPart = activeReasoning[value.item_id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  return;
++                }
+                 activeReasoningPart.summaryParts[value.summary_index] = "active";
+                 for (const summaryIndex of Object.keys(
+                   activeReasoningPart.summaryParts
+@@ -4111,6 +4118,10 @@ var OpenAIResponsesLanguageModel = class {
+                 }
+               });
+             } else if (value.type === "response.reasoning_summary_part.done") {
++              const activeReasoningPart = activeReasoning[value.item_id];
++              if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                return;
++              }
+               if (store) {
+                 controller.enqueue({
+                   type: "reasoning-end",
+@@ -4119,9 +4130,9 @@ var OpenAIResponsesLanguageModel = class {
+                     [providerKey]: { itemId: value.item_id }
+                   }
+                 });
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "concluded";
++                activeReasoningPart.summaryParts[value.summary_index] = "concluded";
+               } else {
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "can-conclude";
++                activeReasoningPart.summaryParts[value.summary_index] = "can-conclude";
+               }
+             } else if (isResponseFinishedChunk(value)) {
+               finishReason = mapOpenAIResponseFinishReason({
+diff --git a/dist/internal/index.mjs b/dist/internal/index.mjs
+index 6018e6fe4..6fd65dc29 100644
+--- a/dist/internal/index.mjs
++++ b/dist/internal/index.mjs
+@@ -4356,6 +4356,10 @@ var OpenAIResponsesLanguageModel = class {
+                 });
+               } else if (value.item.type === "reasoning") {
+                 const activeReasoningPart = activeReasoning[value.item.id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  delete activeReasoning[value.item.id];
++                  return;
++                }
+                 const summaryPartIndices = Object.entries(
+                   activeReasoningPart.summaryParts
+                 ).filter(
+@@ -4438,6 +4442,9 @@ var OpenAIResponsesLanguageModel = class {
+             } else if (value.type === "response.reasoning_summary_part.added") {
+               if (value.summary_index > 0) {
+                 const activeReasoningPart = activeReasoning[value.item_id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  return;
++                }
+                 activeReasoningPart.summaryParts[value.summary_index] = "active";
+                 for (const summaryIndex of Object.keys(
+                   activeReasoningPart.summaryParts
+@@ -4476,6 +4483,10 @@ var OpenAIResponsesLanguageModel = class {
+                 }
+               });
+             } else if (value.type === "response.reasoning_summary_part.done") {
++              const activeReasoningPart = activeReasoning[value.item_id];
++              if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                return;
++              }
+               if (store) {
+                 controller.enqueue({
+                   type: "reasoning-end",
+@@ -4484,9 +4495,9 @@ var OpenAIResponsesLanguageModel = class {
+                     [providerKey]: { itemId: value.item_id }
+                   }
+                 });
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "concluded";
++                activeReasoningPart.summaryParts[value.summary_index] = "concluded";
+               } else {
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "can-conclude";
++                activeReasoningPart.summaryParts[value.summary_index] = "can-conclude";
+               }
+             } else if (isResponseFinishedChunk(value)) {
+               finishReason = mapOpenAIResponseFinishReason({
+diff --git a/dist/internal/index.js b/dist/internal/index.js
+index 5b5cf559b..0d13437ed 100644
+--- a/dist/internal/index.js
++++ b/dist/internal/index.js
+@@ -4295,6 +4295,10 @@ var OpenAIResponsesLanguageModel = class {
+                 });
+               } else if (value.item.type === "reasoning") {
+                 const activeReasoningPart = activeReasoning[value.item.id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  delete activeReasoning[value.item.id];
++                  return;
++                }
+                 const summaryPartIndices = Object.entries(
+                   activeReasoningPart.summaryParts
+                 ).filter(
+@@ -4377,6 +4381,9 @@ var OpenAIResponsesLanguageModel = class {
+             } else if (value.type === "response.reasoning_summary_part.added") {
+               if (value.summary_index > 0) {
+                 const activeReasoningPart = activeReasoning[value.item_id];
++                if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                  return;
++                }
+                 activeReasoningPart.summaryParts[value.summary_index] = "active";
+                 for (const summaryIndex of Object.keys(
+                   activeReasoningPart.summaryParts
+@@ -4415,6 +4422,10 @@ var OpenAIResponsesLanguageModel = class {
+                 }
+               });
+             } else if (value.type === "response.reasoning_summary_part.done") {
++              const activeReasoningPart = activeReasoning[value.item_id];
++              if (!activeReasoningPart || !activeReasoningPart.summaryParts) {
++                return;
++              }
+               if (store) {
+                 controller.enqueue({
+                   type: "reasoning-end",
+@@ -4423,9 +4434,9 @@ var OpenAIResponsesLanguageModel = class {
+                     [providerKey]: { itemId: value.item_id }
+                   }
+                 });
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "concluded";
++                activeReasoningPart.summaryParts[value.summary_index] = "concluded";
+               } else {
+-                activeReasoning[value.item_id].summaryParts[value.summary_index] = "can-conclude";
++                activeReasoningPart.summaryParts[value.summary_index] = "can-conclude";
+               }
+             } else if (isResponseFinishedChunk(value)) {
+               finishReason = mapOpenAIResponseFinishReason({
