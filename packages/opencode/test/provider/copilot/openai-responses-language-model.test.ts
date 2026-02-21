@@ -45,7 +45,7 @@ describe("OpenAIResponsesLanguageModel.doStream", () => {
       provider: "copilot.responses",
       url: () => "https://api.test.com/responses",
       headers: () => ({ Authorization: "Bearer test-token" }),
-      fetch: mockFetch,
+      fetch: mockFetch as unknown as typeof fetch,
     })
 
     const { stream } = await model.doStream({
