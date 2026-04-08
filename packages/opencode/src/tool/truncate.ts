@@ -2,6 +2,7 @@ import { NodePath } from "@effect/platform-node"
 import { Cause, Duration, Effect, Layer, Schedule, ServiceMap } from "effect"
 import path from "path"
 import type { Agent } from "../agent/agent"
+import { Config } from "../config/config"
 import { makeRuntime } from "@/effect/run-service"
 import { AppFileSystem } from "@/filesystem"
 import { evaluate } from "@/permission/evaluate"
@@ -61,8 +62,14 @@ export namespace Truncate {
       })
 
       const output = Effect.fn("Truncate.output")(function* (text: string, options: Options = {}, agent?: Agent.Info) {
-        const maxLines = options.maxLines ?? MAX_LINES
-        const maxBytes = options.maxBytes ?? MAX_BYTES
+        const configResult = yield* Effect.gen(function* () {
+          const cfg = yield* Config.Service
+          const cfgData = yield* cfg.get()
+          return cfgData.truncation
+        }).pipe(Effect.catch(() => Effect.succeed(undefined as { maxLines?: number; maxBytes?: number } | undefined)))
+
+        const maxLines = options.maxLines ?? configResult?.maxLines ?? MAX_LINES
+        const maxBytes = options.maxBytes ?? configResult?.maxBytes ?? MAX_BYTES
         const direction = options.direction ?? "head"
         const lines = text.split("\n")
         const totalBytes = Buffer.byteLength(text, "utf-8")
@@ -134,7 +141,11 @@ export namespace Truncate {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer), Layer.provide(NodePath.layer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(NodePath.layer),
+    Layer.provide(Config.defaultLayer),
+  )
 
   const { runPromise } = makeRuntime(Service, defaultLayer)
 

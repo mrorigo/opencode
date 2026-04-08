@@ -45,6 +45,7 @@ import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
 import { AppFileSystem } from "@/filesystem"
 import { Truncate } from "@/tool/truncate"
+import { Config } from "../config/config"
 import { decodeDataUrl } from "@/util/data-url"
 import { Process } from "@/util/process"
 import { Cause, Effect, Exit, Layer, Option, Scope, ServiceMap } from "effect"
@@ -1722,6 +1723,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Layer.provide(FileTime.defaultLayer),
         Layer.provide(ToolRegistry.defaultLayer),
         Layer.provide(Truncate.layer),
+        Layer.provide(Config.defaultLayer),
         Layer.provide(Provider.defaultLayer),
         Layer.provide(Instruction.defaultLayer),
         Layer.provide(AppFileSystem.defaultLayer),

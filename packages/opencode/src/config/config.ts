@@ -1037,6 +1037,23 @@ export namespace Config {
             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
         })
         .optional(),
+      truncation: z
+        .object({
+          maxLines: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Max lines for tool output truncation (default: 2000)"),
+          maxBytes: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Max bytes for tool output truncation (default: 51200)"),
+        })
+        .optional()
+        .describe("Truncation limits for tool outputs"),
     })
     .strict()
     .meta({
