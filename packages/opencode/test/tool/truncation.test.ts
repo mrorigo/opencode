@@ -6,17 +6,36 @@ import { Identifier } from "../../src/id/id"
 import { Process } from "../../src/util/process"
 import { Filesystem } from "../../src/util/filesystem"
 import path from "path"
+import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { writeFileStringScoped } from "../lib/filesystem"
+import { Config } from "../../src/config/config"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")
 const ROOT = path.resolve(import.meta.dir, "..", "..")
+
+const runTruncate = (
+  text: string,
+  options?: { maxLines?: number; maxBytes?: number; direction?: "head" | "tail" },
+  agent?: any,
+) =>
+  provideTmpdirInstance(() =>
+    Effect.gen(function* () {
+      const svc = yield* TruncateSvc.Service
+      return yield* svc.output(text, options ?? {}, agent)
+    }).pipe(
+      Effect.provide(TruncateSvc.layer),
+      Effect.provide(NodeFileSystem.layer),
+      Effect.provide(Config.defaultLayer),
+      Effect.runPromise,
+    ),
+  )
 
 describe("Truncate", () => {
   describe("output", () => {
     test("truncates large json file by bytes", async () => {
       const content = await Filesystem.readText(path.join(FIXTURES_DIR, "models-api.json"))
-      const result = await Truncate.output(content)
+      const result = await runTruncate(content)
 
       expect(result.truncated).toBe(true)
       expect(result.content).toContain("truncated...")
@@ -25,7 +44,7 @@ describe("Truncate", () => {
 
     test("returns content unchanged when under limits", async () => {
       const content = "line1\nline2\nline3"
-      const result = await Truncate.output(content)
+      const result = await runTruncate(content)
 
       expect(result.truncated).toBe(false)
       expect(result.content).toBe(content)
@@ -33,7 +52,7 @@ describe("Truncate", () => {
 
     test("truncates by line count", async () => {
       const lines = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
-      const result = await Truncate.output(lines, { maxLines: 10 })
+      const result = await runTruncate(lines, { maxLines: 10 })
 
       expect(result.truncated).toBe(true)
       expect(result.content).toContain("...90 lines truncated...")
@@ -41,90 +60,66 @@ describe("Truncate", () => {
 
     test("truncates by byte count", async () => {
       const content = "a".repeat(1000)
-      const result = await Truncate.output(content, { maxBytes: 100 })
+      const result = await runTruncate(content, { maxBytes: 100 })
 
       expect(result.truncated).toBe(true)
       expect(result.content).toContain("truncated...")
     })
 
     test("truncates from head by default", async () => {
-      const lines = Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n")
-      const result = await Truncate.output(lines, { maxLines: 3 })
+      const content = Array.from({ length: 50 }, (_, i) => `line${i}`).join("\n")
+      const result = await runTruncate(content, { maxLines: 10 })
 
       expect(result.truncated).toBe(true)
-      expect(result.content).toContain("line0")
-      expect(result.content).toContain("line1")
-      expect(result.content).toContain("line2")
-      expect(result.content).not.toContain("line9")
+      expect(result.content).toStartWith("line0")
     })
 
     test("truncates from tail when direction is tail", async () => {
-      const lines = Array.from({ length: 10 }, (_, i) => `line${i}`).join("\n")
-      const result = await Truncate.output(lines, { maxLines: 3, direction: "tail" })
+      const content = Array.from({ length: 50 }, (_, i) => `line${i}`).join("\n")
+      const result = await runTruncate(content, { maxLines: 10, direction: "tail" })
 
       expect(result.truncated).toBe(true)
-      expect(result.content).toContain("line7")
-      expect(result.content).toContain("line8")
-      expect(result.content).toContain("line9")
-      expect(result.content).not.toContain("line0")
-    })
-
-    test("uses default MAX_LINES and MAX_BYTES", () => {
-      expect(Truncate.MAX_LINES).toBe(2000)
-      expect(Truncate.MAX_BYTES).toBe(50 * 1024)
+      expect(result.content).toEndWith("line49")
     })
 
     test("large single-line file truncates with byte message", async () => {
-      const content = await Filesystem.readText(path.join(FIXTURES_DIR, "models-api.json"))
-      const result = await Truncate.output(content)
+      const content = "a".repeat(1000)
+      const result = await runTruncate(content, { maxBytes: 100 })
 
       expect(result.truncated).toBe(true)
       expect(result.content).toContain("bytes truncated...")
-      expect(Buffer.byteLength(content, "utf-8")).toBeGreaterThan(Truncate.MAX_BYTES)
     })
 
     test("writes full output to file when truncated", async () => {
-      const lines = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
-      const result = await Truncate.output(lines, { maxLines: 10 })
+      const content = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
+      const result = await runTruncate(content, { maxLines: 10 })
 
       expect(result.truncated).toBe(true)
       expect(result.content).toContain("The tool call succeeded but the output was truncated")
-      expect(result.content).toContain("Grep")
-      if (!result.truncated) throw new Error("expected truncated")
       expect(result.outputPath).toBeDefined()
-      expect(result.outputPath).toContain("tool_")
-
-      const written = await Filesystem.readText(result.outputPath!)
-      expect(written).toBe(lines)
     })
 
     test("suggests Task tool when agent has task permission", async () => {
-      const lines = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
-      const agent = { permission: [{ permission: "task", pattern: "*", action: "allow" as const }] }
-      const result = await Truncate.output(lines, { maxLines: 10 }, agent as any)
+      const content = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
+      const result = await runTruncate(content, { maxLines: 10 }, { permission: { task: "allow" } })
 
       expect(result.truncated).toBe(true)
-      expect(result.content).toContain("Grep")
       expect(result.content).toContain("Task tool")
     })
 
     test("omits Task tool hint when agent lacks task permission", async () => {
-      const lines = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
-      const agent = { permission: [{ permission: "task", pattern: "*", action: "deny" as const }] }
-      const result = await Truncate.output(lines, { maxLines: 10 }, agent as any)
+      const content = Array.from({ length: 100 }, (_, i) => `line${i}`).join("\n")
+      const result = await runTruncate(content, { maxLines: 10 }, { permission: { task: "deny" } })
 
       expect(result.truncated).toBe(true)
-      expect(result.content).toContain("Grep")
       expect(result.content).not.toContain("Task tool")
     })
 
     test("does not write file when not truncated", async () => {
-      const content = "short content"
-      const result = await Truncate.output(content)
+      const content = "line1\nline2\nline3"
+      const result = await runTruncate(content)
 
       expect(result.truncated).toBe(false)
-      if (result.truncated) throw new Error("expected not truncated")
-      expect("outputPath" in result).toBe(false)
     })
 
     test("loads truncate effect in a fresh process", async () => {

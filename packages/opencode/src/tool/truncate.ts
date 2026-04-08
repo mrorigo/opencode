@@ -66,7 +66,7 @@ export namespace Truncate {
           const cfg = yield* Config.Service
           const cfgData = yield* cfg.get()
           return cfgData.truncation
-        }).pipe(Effect.catch(() => Effect.succeed(undefined as { maxLines?: number; maxBytes?: number } | undefined)))
+        }).pipe(Effect.catch(() => Effect.succeed(undefined)))
 
         const maxLines = options.maxLines ?? configResult?.maxLines ?? MAX_LINES
         const maxBytes = options.maxBytes ?? configResult?.maxBytes ?? MAX_BYTES
